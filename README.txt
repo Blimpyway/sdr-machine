@@ -8,7 +8,8 @@ fly_hash_encoder.py - an approximative implementation of Fly Hash encoder.
 	Since memory performance degrades with the square of 1 bits, the SDRs tend to be low <1-2% sparsity
 	
 
-load_mnist_data.py, mnist_data.npz  - quick&dirty loader of numpy savez mnist digits
+load_mnist_data.py - quick&dirty loader of numpy savez mnist digits
+mnist_data.npz  - should unzip mnist.zip since it is 30MBytes bigger than github's max upload size 
 
 sdr_mem2d.py - The actual 2d associative memory see how it works below 
 
