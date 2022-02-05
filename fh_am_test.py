@@ -19,61 +19,62 @@ import numpy as np
 from time import time
 
 
-smap = SDRMap(slot_size = 112)
 
-# Create a FlyHash encoder. The hasher converts a alist of MNIST image to a SDR list of size 2048
-# x_train here is given to adjust "biases" to equalise SDR bits chances to produce 1
-hasher = FHEncoder(x_train[10000:20000])
-
-istart,ilen = 0,20000 # Which x_train digits will stored in memory
+# Which x_train digits will be stored in memory
+istart,ilen = 0,60000 
+#istart,ilen = 0,20000 
 iend   = istart + ilen
+SDR_size = 2048
+SLOT_size = 112
+
+# Use this many bits to store train data in memory
+store_sdr_len = 32  # The length of stored SDRs
+
+# Use these many bits to query sdr memory
+query_sdr_len = 32  # The length of query SDRs
+
+# how many input pixels are "watched" by every output pixel
+encoder_size = 200
+
+
+# Initialise the memory 
+print(f"Initialize SDRMap sdr_size={SDR_size}, slot_size={SLOT_size}")
+print(f"Will use sdr lengths for storage: {store_sdr_len}; for query: {query_sdr_len}")
+smap = SDRMap(sdr_size = SDR_size,slot_size = SLOT_size)
+# Create a FlyHash encoder. The hasher converts a alist of MNIST image to a SDR list of size 2048
+print(f"Generate Flyhash encoder, pixels_per_encoder={encoder_size}...")
+hasher = FHEncoder(sdr_size = SDR_size, random_seed = 3, pixels_per_encoder = encoder_size)
 
 print(f"hasher initialised, we use it to convert {ilen} x_train images to SDRs")
 t = time()
-sdrs = hasher.compute_sdrs(x_train[istart:iend],sdr_len = 25)
+sdrs = hasher.compute_sdrs(x_train[istart:iend],sdr_len = store_sdr_len)
 t = time() - t
 print(f"{ilen} sdrs computed in {int(t*1000)}ms")
 print(f"Training sdrs.shape:{sdrs.shape}, dtype:{sdrs.dtype}")
 
 
-# This encodes both y_train values and train index (position in x_train
-sids = y_train[istart:iend] + np.arange(istart,iend) * 100 + 10000000
+# IDs will encode both y_train values and train index (position in x_train)
+sdr_ids = y_train[istart:iend] + np.arange(istart,iend) * 100 + 10000000
 # If above looks weird, here-s an  example of what it does: if y_train[15632] == 7 then the ID becomes: 
 # 11563207
 # _NNNNN_D   - where '_' are ignored 'D' is the digit value and NNNNN is the row num in the x_train array
 
 print(f"Begin storing {ilen} SDRs in associative memory (a.k.a sdr map)")
 t = time()
-smap.store(sids,sdrs)
+smap.store(sdr_ids,sdrs)
 t = time()-t
 print(f"sdrs stored in {int(1000*t)}ms")
-
-
-# uncomment these blocks if you want to encode&store all 60000 x_train digits
-istart,ilen = 20000,20000
-iend = istart+ilen
-sdrs = hasher.compute_sdrs(x_train[istart:iend],sdr_len = 40)
-sids = y_train[istart:iend] + np.arange(istart,iend) * 100 + 10000000
-smap.store(sids,sdrs)
-
-istart,ilen = 40000,20000
-iend = istart+ilen
-sdrs = hasher.compute_sdrs(x_train[istart:iend],sdr_len = 40)
-sids = y_train[istart:iend] + np.arange(istart,iend) * 100 + 10000000
-smap.store(sids,sdrs)
 
 # "training" done 
 
 # Testing 
 
-#xtest = x_train[:-10000]
-#ytest = y_train[:-10000]
 xtest = x_test
 ytest = y_test
 print("Begin querrying memory map with x_test")
 t=time()
-sdrs = hasher.compute_sdrs(xtest, sdr_len=25)
-idlists, idcounts = smap.query(sdrs,first=6)
+sdrs = hasher.compute_sdrs(xtest, sdr_len=query_sdr_len)
+idlists, idcounts = smap.query(sdrs,first=8)
 t = time()-t
 print(f"Associative query {len(idlists)} done in {int(t*1000)}ms")
 

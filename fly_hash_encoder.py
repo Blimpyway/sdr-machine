@@ -1,36 +1,42 @@
 import numpy as np
 class FHEncoder():
 
-    def __init__(self, x = None, fname = None, random_state = None, sdr_size=2048, pixels_per_encoder=16): 
-        if fname is None: 
-            self.new_encoders(x.shape[1],sdr_size,pixels_per_encoder, random_state)
-            self.init_factors(x)
+    def __init__(self, file_name = None, random_seed = 1, sdr_size=2048, pixels_per_encoder=32): 
+        if file_name is None: 
+            self.sdr_size = sdr_size
+            self.pixels_per_encoder = pixels_per_encoder
+            self.random_seed = random_seed
+            self.dot_encoders = None
         else:
-            self.load(fname)
+            self.load(file_name)
 
-    def compute_sdrs(self, x, sdr_len = 32):
-        scores = x[:,self.encoders].sum(axis=2) / self.factors
-        sdrs = np.flip(np.argsort(scores),axis = -1)
+    def generate_dot_encoders(self, input_size):
+        np.random.seed(self.random_seed)
+        dot_enc_shape = (input_size, self.sdr_size) 
+        dot_encoders = np.zeros(dot_enc_shape, dtype = np.float32)
+        dot_encoders[:,:self.pixels_per_encoder] = 1
+        for line in dot_encoders:
+            np.random.shuffle(line)
+        # print(f"Generated self.dot_encoders of shape {dot_encoders.shape}")
+        self.dot_encoders = dot_encoders
+       
+    def compute_sdrs(self, x, sdr_len = 32): 
+        # Use .dot variant since gets faster as # of pixels_per_encoder increases
+        if self.dot_encoders is None:
+            self.generate_dot_encoders(x.shape[1])
+            self.init_factors(x)
+        scores = x.dot(self.dot_encoders) 
+        sdrs = np.flip(np.argsort(scores / self.factors),axis = -1)
         return sdrs[:,:sdr_len].astype(np.uint32)
+        
+    def init_factors(self,x): 
+        # This attempt to "skip" factors leads to a huge drop in accuracy from 94% to 90%
+        tops = x.shape[0] // 50
+        dotscores = x.dot(self.dot_encoders).T
+        dotscores.sort(axis=1)
+        dotscores = dotscores[:,-tops:].sum(axis=1)
+        self.factors = dotscores / dotscores.mean()
 
-    def new_encoders(self,input_size, sdr_size, pixels_per_encoder, random_state):
-        encoders = [] 
-        np.random.seed(random_state)
-        for _ in range(sdr_size):
-            encoders.append(np.random.permutation(input_size)[:pixels_per_encoder])
-        self.encoders = np.array(encoders,dtype=np.uint32)
-   
-    def init_factors(self,x):
-        factors = []
-        tops = x.shape[0]//50
-        for encoder in self.encoders:
-            scores = x[:,encoder].sum(axis=1)
-            order = np.argsort(scores)
-            top2pcnt = order[-tops:]
-            factors.append(scores[top2pcnt].mean())
-        self.factors = np.array(factors).astype(np.float32)
-
-    
     def load(self,fname):
         if fname.split('.')[-1] != "npz": 
             fname += ".npz"
@@ -46,25 +52,16 @@ if __name__ == "__main__":
     from time import time
 
     X = normalize(x_train)
-    SDR_SIZE = 1024
+    SDR_SIZE = 2048
 
-    t = time()
-    fhe = FHEncoder(X[:10000],sdr_size=SDR_SIZE)
-    t = time() - t
-    #fhe.load_from_dump("fpackteam1.txt")
+    fhe = FHEncoder(sdr_size=SDR_SIZE)
     
-
-
-    print(f"{fhe.encoders.shape[0]} encoders generated in {int(t*1000)}ms")
-    print(f"encoders shape: {fhe.encoders.shape}")
 
     num = 10000
 
     t = time()
-    sdrs = fhe.compute_sdrs(X[:num], sdr_len = 24)
+    sdrs = fhe.compute_sdrs(X[:num])
     t = time() - t
-
     print(f"{num} sdrs of shape {sdrs.shape} computed in {int(t*1000)}ms")
 
-
-    
+    # print(fhe.factors)
