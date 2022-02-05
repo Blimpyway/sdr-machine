@@ -33,8 +33,8 @@ store_sdr_len = 32  # The length of stored SDRs
 # Use these many bits to query sdr memory
 query_sdr_len = 32  # The length of query SDRs
 
-# how many input pixels are "watched" by every output pixel
-encoder_size = 200
+# how many output pixels are touched by every input pixel.
+pixel_spread = 200
 
 
 # Initialise the memory 
@@ -42,8 +42,8 @@ print(f"Initialize SDRMap sdr_size={SDR_size}, slot_size={SLOT_size}")
 print(f"Will use sdr lengths for storage: {store_sdr_len}; for query: {query_sdr_len}")
 smap = SDRMap(sdr_size = SDR_size,slot_size = SLOT_size)
 # Create a FlyHash encoder. The hasher converts a alist of MNIST image to a SDR list of size 2048
-print(f"Generate Flyhash encoder, pixels_per_encoder={encoder_size}...")
-hasher = FHEncoder(sdr_size = SDR_size, random_seed = 3, pixels_per_encoder = encoder_size)
+print(f"Generate Flyhash encoder, spread={pixel_spread}...")
+hasher = FHEncoder(sdr_size = SDR_size, random_seed = 3, spread = pixel_spread)
 
 print(f"hasher initialised, we use it to convert {ilen} x_train images to SDRs")
 t = time()

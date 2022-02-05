@@ -1,10 +1,10 @@
 import numpy as np
 class FHEncoder():
 
-    def __init__(self, file_name = None, random_seed = 1, sdr_size=2048, pixels_per_encoder=32): 
+    def __init__(self, file_name = None, random_seed = 1, sdr_size=2048, spread=128): 
         if file_name is None: 
             self.sdr_size = sdr_size
-            self.pixels_per_encoder = pixels_per_encoder
+            self.spread = spread
             self.random_seed = random_seed
             self.dot_encoders = None
         else:
@@ -14,14 +14,14 @@ class FHEncoder():
         np.random.seed(self.random_seed)
         dot_enc_shape = (input_size, self.sdr_size) 
         dot_encoders = np.zeros(dot_enc_shape, dtype = np.float32)
-        dot_encoders[:,:self.pixels_per_encoder] = 1
+        dot_encoders[:,:self.spread] = 1
         for line in dot_encoders:
             np.random.shuffle(line)
         # print(f"Generated self.dot_encoders of shape {dot_encoders.shape}")
         self.dot_encoders = dot_encoders
        
     def compute_sdrs(self, x, sdr_len = 32): 
-        # Use .dot variant since gets faster as # of pixels_per_encoder increases
+        # Use .dot variant since gets faster as # of spread increases
         if self.dot_encoders is None:
             self.generate_dot_encoders(x.shape[1])
             self.init_factors(x)
