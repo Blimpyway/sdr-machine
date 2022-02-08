@@ -21,7 +21,7 @@ SDR_LEN  = SDR_SIZE // 13  #  sparsity as measured from htm.core mnist.py exampl
 X_train = normalize(x_train)
 X_test  = normalize(x_test)
 
-fhe = FHEncoder(sdr_size = SDR_SIZE, spread = 200)
+fhe = FHEncoder(sdr_size = SDR_SIZE, spread = 900)
 
 fh_train = np.zeros((X_train.shape[0], SDR_LEN), dtype = np.uint32)
 

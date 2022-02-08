@@ -101,14 +101,12 @@ def main(parameters=default_parameters, argv=None, verbose=True):
     tms = time()
     # Training Loop was split in 2: first train the spatial pooler, then train the classifier over the outputs
     # of already trained spatial pooler. 
-    """
     for i in range(len(train_images)):
         img, lbl = training_data[i]
         encode(img, enc)
         sp.compute( enc, True, columns )
     tms = int((time() - tms)*1000)
     print(f"spatial pooler trained in {tms}ms, now we train the classifier")
-    """
     bits_on, bits_size = 0, 0 
     tms = time()
     for i in range(len(train_images)): 
