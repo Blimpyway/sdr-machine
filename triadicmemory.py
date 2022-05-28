@@ -15,7 +15,6 @@ import numpy as np
 
 class TriadicMemory:
     def __init__(self, N = 1000, P = 10): 
-        self.N = N
         self.P = P 
         self._mem = np.zeros((N,N,N), dtype = np.uint8)
 
@@ -26,35 +25,30 @@ class TriadicMemory:
 
     def query(self, x,y,z = None):
         # One of x, y, z must be None. That will be queried for
-        if x is None:
-            return self.queryX(y, z)
+       
+        if z is None: # most common case first
+            sums = self._mem[x,y,:].sum(axis=0)
         elif y is None: 
-            return self.queryY(x, z)
-        elif z is None:
-            return self.queryZ(x, y)
-        else:
-            pass
-            # Here we can either store x,y,x triple, return nothing or throw error
+            sums = self._mem[x,:,z].sum(axis=0)
+        elif x is None:
+            sums = self._mem[:,y,z].sum(axis=1)
+        else: 
+            # neither is None - we don't know what to query for. 
+            # but we can store it..
+            self.store(x,y,z)
+            return None
+        return self._clear_response(sums)
     
-    def queryX(self, y,z): 
-        # Find X knowing Y and Z
-        r = np.argsort(self._mem[:,y,z].sum(axis=1))[-self.P:]
-        r.sort()
-        return r
 
-
-    def queryY(self, x,z):
-        # Find Y knowing X and Z
-        r = np.argsort(self._mem[x,:,z].sum(axis=0))[-self.P:]
-        r.sort()
-        return r
-
-
-    def queryZ(self, x,y):
-        # Find Z knowing Y and X
-        r = np.argsort(self._mem[x,y,:].sum(axis=0))[-self.P:]
-        r.sort()
-        return r
+    def _clear_response(self, sums):
+        ssums = sums.copy()
+        ssums.sort()
+        #print (sums)
+        threshval = ssums[-self.P] 
+        if threshval == 0:
+            return np.argwhere(sums) 
+        else:
+            return np.where(sums >= threshval)
 
 
 
@@ -63,15 +57,19 @@ if __name__ == "__main__":
     
     tm = TriadicMemory()
 
-    X = [10,11,12,13,14,15,16,17,18,19]
-    Y = [100,101,102,103,104,105,106,107,108,109]
-    Z = [200,201,202,203,204,205,206,207,208,209]
+    W = [10,11,12,13,14,15,16,17,18,19]
+    X = [100,101,102,103,104,105,106,107,108,109]
+    
+    Y = [200,201,202,203,204,205,206,207,208,209]
+    Z = [300,301,302,303,304,305,306,307,308,309]
 
+    tm.store(W,X,Y)
+    tm.store(X,Y,Z)
 
-    tm.store(X,Y,Z) 
-
-    print(tm.query(None, Y, Z)) 
-
-    print(tm.query(X, None, Z))
-
-    print(tm.query(X, Y))
+    print("W is ", W)
+    print("X is ", X)
+    print("Y is ", Y) 
+    print("Z is ", Z)
+    print("Expect W: ", tm.query(None, X, Y))
+    print("Expect X: ", tm.query(W, None, Y)) 
+    print("Expect Z: ", tm.query(X, Y))
