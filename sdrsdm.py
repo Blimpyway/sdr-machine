@@ -124,7 +124,7 @@ class TriadicMemory:
             return queryY(self.mem, self.P, x, z)
 
 
-class DiadicMemort:
+class DiadicMemory:
     """
     this is a convenient object front end for SDM functions
     """
