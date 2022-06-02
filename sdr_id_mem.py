@@ -52,7 +52,7 @@ def _id_counter(mem, x, thresh = 5):
     return sorted(ret, reverse=True)
 
 
-@numba.jit
+@numba.jit(fastmath=True, nogil=True, cache=True)
 def _bit_query(mem, x, thresh): 
     """
     unlike _id_counter this uses a bitmap to remove 
@@ -112,7 +112,13 @@ class SDR_MEM:
     def num_slots(self):
         # since number of slots are computed dynamically in __init__() from mem_size and slot_size 
         # here-s a co
+        return self.mem.shape[0]
 
+    def min_sdr_size(self):
+        """ 
+        recommended minimum size sdr in order to adequately use the num_slots wide space
+        """
+        return int((self.num_slots() * 2) ** .5 + 1)
 
 def random_sdrs(num_sdrs, sdr_size, on_bits): 
     tor = np.zeros((num_sdrs, on_bits), dtype = np.uint32)
@@ -125,18 +131,20 @@ def random_sdrs(num_sdrs, sdr_size, on_bits):
 if __name__ == "__main__":
     mem_size = 1_000_000_000 # How big a memory to allocate in bytes
     sdr_size =   10000
-    bit_size =      15      # sdr solidity
+    bit_size =      20      # sdr solidity
     num_sdrs = 1000000     # How many sdrs to store
     qry_sdrs = 1000000     # How many sdrs to query
     slot_size =   23
 
+    mem = SDR_MEM(mem_size, slot_size = slot_size)
     print(f"Testing {num_sdrs} entries AM with slot_size={slot_size} and {bit_size}/{sdr_size} bit sdrs")
+
+    print(f"Minimum sdr size: {mem.min_sdr_size()}")
     from time import time
     t = time()
     sdrs = random_sdrs(num_sdrs, sdr_size, bit_size)
     t = time() - t
     print(f"{len(sdrs)} random sdrs generated in {int(t*1000)} ms")
-    mem = SDR_MEM(mem_size, slot_size = slot_size)
     print("mem size:" , mem.mem.size * 4 // 2 ** 20)
     t = time()
     for num, sdr in enumerate(sdrs): 
