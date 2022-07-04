@@ -64,7 +64,7 @@ SDR_SIZE  = 200  # Because we know it :) If changed then sdr_encoder() must be a
 SDR_BITS  =   7  # Number of ON bits for each state parameter
 STATE_SIZE =  4  # How many parameters are within a state
 LEFT,RIGHT = 0,1
-NUM_EPISODES = 1000 # steps is really booring
+NUM_EPISODES = 1000 # is really booring
 EMPTY_SDR = np.array([], dtype = np.uint32)
 
 @numba.jit
@@ -96,7 +96,7 @@ def min_max_adjust(state, minims, maxims):
 
 class SDR_Proxy_Player:
     def __init__(self, player):
-        self.maxims =  0.1 * np.ones(4)
+        self.maxims =  1.1 * np.ones(4)
         self.minims = - self.maxims.copy()
         self.player = player
 
@@ -137,7 +137,7 @@ class AvoidantPlayer():
         if len(self.states) > 499:
             print("Hooray!! ", end = '')
             return
-        danger = 18
+        danger = 18 # trust me 18 is right
         while danger and len(self.states):
             sdr    = self.states.pop()
             action = self.actions.pop()
