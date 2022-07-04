@@ -42,6 +42,42 @@ def sdr_overlap(n1,n2):
         i1 += 1
     return out
 
+@numba.njit(fastmath=True)
+def sdr_intersection(n1, n2): 
+    """
+    returns bits found in both n1 and n2
+    """
+    out = [] 
+    i1, i2 = 0, 0
+    while i1 < n1.size and i2 < n2.size:
+        v1, v2 = n1[i1], n2[i2]
+        if v1 == v2:
+            out.append(v1)
+            i2 += 1
+        elif v1 > v2:
+            i2 += 1
+            continue
+        i1 += 1
+    return np.array(out, dtype = np.uint32)
+
+@numba.njit(fastmath = True)
+def sdr_union(n1,n2): 
+    out = []
+    i1, i2 = 0, 0
+    while i1 < n1.size and i2 < n2.size:
+        v1, v2 = n1[i1], n2[i2]
+        if v1 == v2:
+            # out.append(v1)
+            i2 += 1
+        elif v1 > v2:
+            out.append(v2)
+            i2 += 1
+            continue
+        out.append(v1)
+        i1 += 1
+    return np.array(out, dtype = np.uint32)
+
+
 @numba.njit(fastmath = True)
 def sdr_distance(n1, n2): 
     """
@@ -54,6 +90,17 @@ def sdr_distance(n1, n2):
     """
     return 1.0 - 2.0 * sdr_overlap(n1, n2) / (len(n1) + len(n2)) 
 
+@numba.jit
+def random_sdr(sdr_size, sdr_len):
+    out = np.zeros(sdr_len, dtype = np.uint32)
+    r = np.random.randint(0,sdr_size)
+    for i in range(sdr_len):
+        while r in out:
+            r = np.random.randint(0,sdr_size)
+        out[i] = r
+    out.sort()
+    return out
+    
 @numba.jit
 def near_sdr(sdr, sdr_size, switch = 3):
     """
@@ -101,6 +148,7 @@ def random_sdrs(num_sdrs, sdr_size, on_bits):
     
     """
     return near_sdrs(num_sdrs, sdr_size, on_bits, on_bits)[1:]
+
 
 
 if __name__ == "__main__":
