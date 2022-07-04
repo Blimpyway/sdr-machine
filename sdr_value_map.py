@@ -169,11 +169,11 @@ if __name__ == "__main__":
     SDR_LEN  =  28  # 200/28 was quite successful in cartpole example
 
     MAP_SIZE = SDR_SIZE * (SDR_SIZE - 1) // 2
-    vmap = ValueMap(sdr_size = SDR_SIZE)
+    vmap = ValueCorrMap(sdr_size = SDR_SIZE)
     value_map = vmap.vmap
     print(f"value map shape: { value_map.shape }")
 
-    num_sdrs = 10000
+    num_sdrs = 1000000
     sdrs = np.array(random_sdrs(num_sdrs, SDR_SIZE, SDR_LEN))
 
     t = time()

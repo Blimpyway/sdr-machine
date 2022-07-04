@@ -59,7 +59,6 @@ from time import time
 import gym, random, numba
 
 from sdr_value_map import ValueCorrMap
-from sdr_util import sdr_overlap, random_sdr
 
 SDR_SIZE  = 200  # Because we know it :) If changed then sdr_encoder() must be adjusted too
 SDR_BITS  =   7  # Number of ON bits for each state parameter
