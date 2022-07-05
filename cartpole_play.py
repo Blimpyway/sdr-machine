@@ -58,22 +58,19 @@ import numpy as np
 from time import time
 import gym, random, numba
 
-from sdr_value_map import ValueCorrMap
+from sdr_value_map import ValueCorrMap # The magic ingredient
 
-SDR_SIZE  = 200  # Because we know it :) If changed then sdr_encoder() must be adjusted too
-SDR_BITS  =   7  # Number of ON bits for each state parameter
+SDR_SIZE  = 100  
+SDR_BITS  =   4  # Number of ON bits for each state parameter
 STATE_SIZE =  4  # How many parameters are within a state
 LEFT,RIGHT = 0,1
-NUM_EPISODES = 1000 # is really booring
+NUM_EPISODES = 1000 
 EMPTY_SDR = np.array([], dtype = np.uint32)
 
 @numba.jit
 def sdr_encoder(state, minims, maxims):
-    # should be 0, 100, 200, 300 
     sdr_starts  = ( np.arange(STATE_SIZE) * SDR_SIZE // STATE_SIZE).astype(np.uint32)
-    # sdr_widths  = 96, 96, 96, 96
     sdr_widths  = np.array([sdr_starts[1]-SDR_BITS] * 4, dtype = np.uint32)
-    # sdr_bits    = 4, 4, 4, 4
     sdr_bits = np.array([SDR_BITS]*STATE_SIZE, dtype = np.uint32)
     sdr = []
     ranges = (maxims - minims)
@@ -95,8 +92,15 @@ def min_max_adjust(state, minims, maxims):
     maxims[where] = state[where]
 
 class SDR_Proxy_Player:
+    # This is a wrapper over an actual player. 
+    # its purpose is to convert the float representation to SDR
+    # (SDR encoder). 
+    # Its peculiarity vs usual scalar encoders is it dynamically
+    # adjusts its range to map efficiently the state space into SDR space
+    # 
     def __init__(self, player):
-        self.maxims =  1.1 * np.ones(4)
+        # initial values for all state parameters are within -0.1 +0.1 range
+        self.maxims =  0.1 * np.ones(4)
         self.minims = - self.maxims.copy()
         self.player = player
 
@@ -106,26 +110,38 @@ class SDR_Proxy_Player:
         return self.player.policy(sdr,reward,done)
 
 class AvoidantPlayer(): 
+    """
+    As I probably mentioned its survival strategy is fear:
+    Every time it dies the state-action pairs preceding its death
+      are saved into two fear maps: one ValueCorrMap encodes fear to move left
+      and the other one to move right. 
+      The closer to dying state the higher the fear level. 
+
+
+    """
 
     def __init__(self):
         self.dangers = [ValueCorrMap(sdr_size = SDR_SIZE) for _ in (LEFT,RIGHT)]
         self.new_game()
 
     def new_game(self):
-        self.states, self.actions = [], []
+        self.steps = []
+        self.reward = 0
         
     def least_danger(self,sdr): 
+        # returns which action is least dangerous except t
+        # when they-re so close that it picks randomly
+
         scores = [danger.score(sdr) for danger in self.dangers]
         e = 0.00001
         if  max(scores) / (min(scores)+e) < 1.01: 
-            # same danger? play random
             return random.randint(0,1)
-        return scores[0] > scores[1]
+        return scores[LEFT] > scores[RIGHT]
 
     def policy(self,sdr,reward,done):
         action = self.least_danger(sdr)
-        self.actions.append(action)
-        self.states.append(sdr)
+        self.steps.append((sdr, action))
+        self.reward += reward
         if done :
             self.update_dangers()
             self.new_game()
@@ -133,14 +149,14 @@ class AvoidantPlayer():
 
     def update_dangers(self):
         # Now the game is ended 
-        # 
-        if len(self.states) > 499:
-            print("Hooray!! ", end = '')
-            return
-        danger = 18 # trust me 18 is right
-        while danger and len(self.states):
-            sdr    = self.states.pop()
-            action = self.actions.pop()
+        # This is where learning happens:
+        if self.reward > 490:   # consider > 490 points as success
+            print("yup! ", end = '')
+            return              # nothing scary happened, don't record anything
+
+        danger = 18 
+        while danger and len(self.steps):
+            sdr, action    = self.steps.pop()
             self.dangers[action].add(sdr, danger)
             danger -= 1
     
@@ -158,6 +174,7 @@ def cartpole_play(policy, n_episodes):
             action = policy(state, reward, done)
             if done: break
             state, reward, done, info = cp.step(action)
+            cp.render()
             steps.append((action, state,  reward, done))
             rtotal += reward
         yield ep, rtotal,istate, steps       
